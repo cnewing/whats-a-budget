@@ -57,3 +57,39 @@ self.addEventListener("fetch", function (event) {
 
     return;
   }
+  event.respondWith(
+    fetch(event.request).catch(function () {
+      return caches.match(event.request).then(function (response) {
+        if (response) {
+          return response;
+        } else if (event.request.headers.get("accept").includes("text/html")) {
+          // return the cached home page for all requests for html pages
+          return caches.match("/");
+        }
+      });
+    })
+  );
+});
+
+self.addEventListener("activate", function (e) {
+  e.waitUntil(
+    caches.keys().then(function (keyList) {
+      // `keyList` contains all cache names under your username.github.io
+      // filter out ones that has this app prefix to create white list
+      let cacheKeeplist = keyList.filter(function (key) {
+        return key.indexOf(APP_PREFIX);
+      });
+      // add current cache name to white list
+      cacheKeeplist.push(CACHE_NAME);
+
+      return Promise.all(
+        keyList.map(function (key, i) {
+          if (cacheKeeplist.indexOf(key) === -1) {
+            console.log("deleting cache : " + keyList[i]);
+            return caches.delete(keyList[i]);
+          }
+        })
+      );
+    })
+  );
+});
