@@ -30,3 +30,40 @@ request.onsuccess = ({ target }) => {
 request.onerror = function (event) {
   console.log("Mistakes were made! " + event.target.errorCode);
 };
+
+// S A V E  R E C O R D
+function saveRecord(record) {
+  const transaction = db.transaction([objectStore], "readwrite");
+  const store = transaction.objectStore(objectStore);
+  store.add(record);
+}
+
+function checkDatabase() {
+  const transaction = db.transaction([objectStore], "readwrite");
+  const store = transaction.objectStore(objectStore);
+  const getAll = store.getAll();
+
+  getAll.onsuccess = function () {
+    if (getAll.result.length > 0) {
+      fetch("/api/transaction/bulk", {
+        method: "POST",
+        body: JSON.stringify(getAll.result),
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => {
+          return response.json();
+        })
+        .then(() => {
+          const transaction = db.transaction([objectStore], "readwrite");
+          const store = transaction.objectStore(objectStore);
+          store.clear();
+        });
+    }
+  };
+}
+
+// L I S T E N E R  F O R  O N L I N E  S T A T U S
+window.addEventListener("online", checkDatabase);
